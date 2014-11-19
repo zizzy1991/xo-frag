@@ -2,6 +2,13 @@
 __pycache__/
 *.py[cod]
 
+# gaussian log, gjf, com, etc
+*.log
+*.gjf
+*.com
+*.out
+*.gau
+
 # C extensions
 *.so
 
