@@ -84,6 +84,8 @@ class Fragment(object):
 	def __len__(self):
 		return len(self.atoms) + len(self.hydrogen) * 0 
 	
+	def __iter__(self):
+		return iter(self.atoms)
 
 	def __or__(self, another):
 		''' merge two fragments
@@ -211,15 +213,31 @@ class Fragmentor(object):
 			H2_f.flag = -(total - len(self.molecule)) / 2
 			self.frags.append(H2_f)
 
-	def sortfrags(self):
+	def _sortfrags(self):
 		for i in self.frags:
 			i.sort()
-	
+
 	def _clean(self):
 		''' delete fragments embedded by another
 		'''
-	
-		pass
+		# self._sortfrags()
+		changed = True
+		while changed:
+			changed = False
+			for i, x in enumerate(self.frags):
+				for j, y in enumerate(self.frags):
+					xisiny = True
+					if j != i:
+						for s in x:
+							xisiny = xisiny and (s in y)
+						if xisiny:
+							break
+					xisiny = False
+				if xisiny:
+					self.frags.remove(x)
+					changed = True
+					break
+
 
 class MTAfrag(Fragment):
 	def __init__(self, parentMole, title = ''):
@@ -279,6 +297,7 @@ class MTA(Fragmentor):
 				self._generateFragment(i)
 				self.frags[-1].check()
 		self._autoCombine()
+		self._clean()
 
 	def __str__(self):
 		return "MTA: should use output() or xout()"
@@ -470,6 +489,7 @@ class FragForOpt(Fragmentor):
 	
 	def Run(self):
 		self._generateFragment()
+		self._clean()
 
 	def __str__(self):
 		st = ''
@@ -496,7 +516,7 @@ class Frouper(object):
 			i.sort(lambda x, y : cmp(x.index0, y.index0))
 			l = 'f'
 			for j in i:
-				l = l + 'o%s' % j.index0
+				l = l + 'o%s' % (j.index0 + 1)
 			l = l + ' : ['
 			for j in i[:-1]:
 				l = l + j.xout() + ','
@@ -519,6 +539,31 @@ class Frouper(object):
 
 	def Run(self):
 		pass
+
+	def _sortfrags(self):
+		for i in self.frags:
+			i.sort()
+
+	def _clean(self):
+		''' delete fragments embedded by another
+		'''
+		self._sortfrags()
+		changed = True
+		while changed:
+			changed = False
+			for i, x in enumerate(self.frags):
+				for j, y in enumerate(self.frags):
+					xisiny = True
+					if j != i:
+						for s in x:
+							xisiny = xisiny and (s in y)
+						if xisiny:
+							break
+					xisiny = False
+				if xisiny:
+					self.frags.remove(x)
+					changed = True
+					break
 
 class SFM(Frouper):
 	''' recursive?
@@ -624,16 +669,23 @@ class SFM(Frouper):
 				# add q to self.frags[]
 				self.frags.append(q[0])
 			q = q[1:]
+		self._clean()
 
 	def xout(self):
 		s = ''
+		#for i in self.frags:
+		#	a = ''
+		#	for j in i:
+		#		a = a + self.groups.groups[j].xout() + ','
+		#	print a
+		# print '============================================================'
 		for i in self.frags:
 			# i.sort(lambda x, y : cmp(x.index0, y.index0))
 			i.sort()	
 			l = 'f'
-			l = l + '%s' % self.groups.groups[i[0]].index0
+			l = l + '%s' % (self.groups.groups[i[0]].index0 + 1)
 			for j in i[1:]:
-				l = l + 'o%s' % self.groups.groups[j].index0
+				l = l + 'o%s' % (self.groups.groups[j].index0 + 1)
 			l = l + ' : ['
 			for j in i[:-1]:
 				l = l + self.groups.groups[j].xout() + ','
@@ -651,6 +703,7 @@ class CFM(Frouper):
 	def Run(self):
 		for i in self.groups:
 			self._addByBond(i.index, self.rd)
+		self._clean()
 	
 	def __str__(self):
 		return "< CFM fragmentor for molecule %s >" % self.molecule.title
